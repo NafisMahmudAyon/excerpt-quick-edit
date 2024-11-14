@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Excerpt Quick Edit
+Plugin Name: Excerpt Quick Edit3233
 Plugin URI: http://example.com
 Description: Allows quick editing of excerpts in the Quick Edit menu for posts, pages, and custom post types.
 Version: 1.0

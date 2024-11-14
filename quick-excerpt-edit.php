@@ -2,7 +2,7 @@
 /*
 Plugin Name: Excerpt Quick Edit
 Plugin URI: 
-Description: Adds excerpt field in Quick Edit for posts, pages and custom post types
+Description: Adds excerpt editing capability to Quick Edit for posts, pages, and custom post types
 Version: 1.0
 Author: Your Name
 Author URI: 
@@ -19,204 +19,190 @@ class ExcerptQuickEdit
 
   public function __construct()
   {
-    try {
-      // Add quick edit custom box
-      add_action('quick_edit_custom_box', array($this, 'add_quick_edit_field'), 10, 2);
+    // Add quick edit custom box
+    add_action('quick_edit_custom_box', array($this, 'add_quick_edit_field'), 10, 2);
 
-      // Add necessary scripts
-      add_action('admin_enqueue_scripts', array($this, 'add_admin_scripts'));
+    // Add necessary scripts
+    add_action('admin_enqueue_scripts', array($this, 'add_admin_scripts'));
 
-      // Save quick edit data
-      add_action('save_post', array($this, 'save_quick_edit_data'));
+    // Save quick edit data
+    add_action('save_post', array($this, 'save_quick_edit_data'), 10, 2);
 
-      // Add data to quick edit row
-      add_filter('manage_posts_columns', array($this, 'add_hidden_column'));
-      add_action('manage_posts_custom_column', array($this, 'add_hidden_column_content'), 10, 2);
+    // Add this to your main plugin file
+    add_action('init', function () {
+      // Add excerpt support to pages (if needed)
+      add_post_type_support('page', 'excerpt');
 
-      // Do the same for pages
-      add_filter('manage_pages_columns', array($this, 'add_hidden_column'));
-      add_action('manage_pages_custom_column', array($this, 'add_hidden_column_content'), 10, 2);
-    } catch (Exception $e) {
-      $this->log_error('Constructor error: ' . $e->getMessage());
-    }
+      // Add excerpt support to any other post type
+      // add_post_type_support('your_custom_post_type', 'excerpt');
+
+
+    });
+    // Add these new actions to register the column
+    add_filter(
+      'manage_posts_columns',
+      array($this, 'add_excerpt_column')
+    );
+    add_filter(
+      'manage_pages_columns',
+      array($this, 'add_excerpt_column')
+    );
+
+    // Add column values
+    add_action('manage_posts_custom_column', array($this, 'custom_column_content'), 10, 2);
+    add_action('manage_pages_custom_column', array($this, 'custom_column_content'), 10, 2);
   }
 
-  // Add quick edit field
+  public function add_excerpt_column($columns)
+  {
+    $columns['excerpt'] = __('Excerpt', 'excerpt-quick-edit');
+    return $columns;
+  }
+  // Add Quick Edit field
   public function add_quick_edit_field($column_name, $post_type)
   {
-    if ($column_name != 'excerpt_quick_edit') return;
+    // Only add for excerpt column
+    if ($column_name != 'excerpt') return;
 ?>
-    <fieldset class="inline-edit-col-right">
-      <div class="inline-edit-col">
-        <label>
-          <span class="title">Excerpt</span>
-          <span class="input-text-wrap">
-            <textarea name="excerpt" id="excerpt" rows="3"></textarea>
-          </span>
-        </label>
-        <?php wp_nonce_field('save_excerpt_quick_edit_nonce', 'excerpt_nonce'); ?>
-      </div>
-    </fieldset>
-
+<fieldset class="inline-edit-col-right">
+  <div class="inline-edit-col">
+    <label>
+      <span class="title">Excerpt</span>
+      <span class="input-text-wrap">
+        <textarea name="excerpt" class="excerpt" id="excerpt" rows="3"></textarea>
+      </span>
+    </label>
+  </div>
+</fieldset>
 <?php
   }
-  //   catch (Exception $e) {
-  //     $this->log_error('Quick edit field error: ' . $e->getMessage());
-  //   }
-  // }
 
-
+  // Add necessary JavaScript
   public function add_admin_scripts($hook)
   {
-    try {
-      if ('edit.php' != $hook) return;
+    if ('edit.php' != $hook) return;
 
-      $js_path = 'js/quick-edit.js';
-      $full_path = plugin_dir_path(__FILE__) . $js_path;
-
-      if (!file_exists($full_path)) {
-        throw new Exception('JavaScript file not found: ' . $js_path);
-      }
-
-      wp_enqueue_script(
-        'excerpt-quick-edit-script',
-        plugins_url($js_path, __FILE__),
-        array('inline-edit-post'), // Removed jQuery dependency
-        filemtime($full_path),
-        true
-      );
-    } catch (Exception $e) {
-      $this->log_error('Admin scripts error: ' . $e->getMessage());
-    }
+    wp_enqueue_script(
+      'excerpt-quick-edit',
+      plugins_url('js/excerpt-quick-edit.js', __FILE__),
+      array('inline-edit-post'),
+      '',
+      true
+    );
   }
 
-
-
-  // public function save_quick_edit_data($post_id)
+  // Save the quick edit data
+  // public function save_quick_edit_data($post_id, $post)
   // {
-  //   try {
-  //     // Verify nonce if you're using one
-  //     if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'update-post_' . $post_id)) {
-  //       throw new Exception('Nonce verification failed.');
-  //     }
+  //   // Verify nonce and permissions
+  //   if (!current_user_can('edit_post', $post_id)) {
+  //     return;
+  //   }
 
-  //     // Check if this is an autosave
-  //     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-  //       throw new Exception('Autosave in progress. Aborting to prevent overriding.');
-  //     }
+  //   // If this is an autosave, don't update the excerpt
+  //   if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+  //     return;
+  //   }
 
-  //     // Check permissions
-  //     if (!current_user_can('edit_post', $post_id)) {
-  //       throw new Exception('Insufficient permissions to edit post.');
-  //     }
-
-  //     // Check if excerpt was sent
-  //     if (!isset($_POST['excerpt'])) {
-  //       throw new Exception('No excerpt data submitted.');
-  //     }
-
-  //     $excerpt = wp_kses_post(trim($_POST['excerpt']));
-
-  //     // Update the post with the new excerpt
-  //     $update_result = wp_update_post(array(
+  //   // Check if excerpt was set
+  //   if (isset($_POST['excerpt'])) {
+  //     update_post_meta($post_id, '_excerpt', sanitize_textarea_field($_POST['excerpt']));
+  //     $my_post = array(
   //       'ID' => $post_id,
-  //       'post_excerpt' => $excerpt
-  //     ), true); // true to return WP_Error on failure
-
-  //     if (is_wp_error($update_result)) {
-  //       throw new Exception('Update failed: ' . $update_result->get_error_message());
-  //     }
-
-  //     // Verify that the update took place
-  //     $updated_excerpt = get_post_field('post_excerpt', $post_id);
-  //     if ($updated_excerpt !== $excerpt) {
-  //       throw new Exception('Excerpt failed to update properly.');
-  //     }
-
-  //     // Log the successful update
-  //     $this->log_error('Excerpt updated successfully for post ID ' . $post_id);
-  //   } catch (Exception $e) {
-  //     $this->log_error('Error saving excerpt: ' . $e->getMessage());
-  //     wp_die('Error saving excerpt: ' . esc_html($e->getMessage())); // Optionally, you can handle this more gracefully depending on your application's needs
+  //       'post_excerpt' => sanitize_textarea_field($_POST['excerpt'])
+  //     );
+  //     remove_action('save_post', array($this, 'save_quick_edit_data'));
+  //     wp_update_post($my_post);
+  //     add_action('save_post', array($this, 'save_quick_edit_data'), 10, 2);
   //   }
   // }
 
 
-  public function save_quick_edit_data($post_id)
+  // public function save_quick_edit_data($post_id, $post)
+  // {
+  //   // Verify nonce and permissions
+  //   if (!current_user_can('edit_post', $post_id)) {
+  //     return;
+  //   }
+
+  //   // If this is an autosave, don't update the excerpt
+  //   if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+  //     return;
+  //   }
+
+  //   // Check if excerpt was set
+  //   if (isset($_POST['excerpt'])) {
+  //     $my_post = array(
+  //       'ID' => $post_id,
+  //       'post_excerpt' => sanitize_textarea_field($_POST['excerpt'])
+  //     );
+  //     remove_action('save_post', array($this, 'save_quick_edit_data'));
+  //     wp_update_post($my_post);
+  //     add_action('save_post', array($this, 'save_quick_edit_data'), 10, 2);
+  //   }
+  // }
+
+  public function save_quick_edit_data($post_id, $post)
   {
-    try {
-      // Verify nonce
-      if (!isset($_POST['excerpt_nonce']) || !wp_verify_nonce($_POST['excerpt_nonce'], 'save_excerpt_quick_edit_nonce')) {
-        throw new Exception('Nonce verification failed');
-      }
+    // Add basic debug logging
+    error_log('Quick Edit Save Triggered for post: ' . $post_id);
+    
+    // Verify permissions
+    if (!current_user_can('edit_post', $post_id)) {
+      error_log('Permission check failed for post: ' . $post_id);
+      return;
+    }
+    
+    // If this is an autosave, don't update the excerpt
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+      error_log('Autosave detected, skipping excerpt update');
+      return;
+    }
+    
+    // Check if excerpt was set
+    if (isset($_POST['excerpt'])) {
+      $message = $_POST['excerpt'];
+      error_log('Quick Edit Save Triggered for post: '. $post_id.'with message: '. $message);
+      error_log('Excerpt found in POST data: ' . $_POST['excerpt']);
 
-      // Check if this is an autosave
-      if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+      // Temporarily store old excerpt for verification
+      $old_excerpt = get_post_field('post_excerpt', $post_id);
 
-      // Check permissions
-      if (!current_user_can('edit_post', $post_id)) return;
+      $my_post = array(
+        'ID' => $post_id,
+        'post_excerpt' => wp_kses_post($_POST['excerpt'])
+      );
 
-      // Check if excerpt was sent
-      if (isset($_POST['excerpt'])) {
-        $excerpt = wp_kses_post(trim($_POST['excerpt']));
+      // Remove the action to prevent infinite loop
+      remove_action('save_post', array($this, 'save_quick_edit_data'));
 
-        $update_result = wp_update_post(array(
-          'ID' => $post_id,
-          'post_excerpt' => $excerpt
-        ), true);
+      // Update the post
+      $result = wp_update_post($my_post);
 
-        if (is_wp_error($update_result)) {
-          throw new Exception($update_result->get_error_message());
-        }
-      }
-    } catch (Exception $e) {
-      error_log('Excerpt Quick Edit Plugin Error: ' . $e->getMessage());
-      wp_die('Error saving excerpt: ' . esc_html($e->getMessage()));
+      // Log the result and verify the update
+      error_log('Update result: ' . ($result ? 'success' : 'failed'));
+      $new_excerpt = get_post_field('post_excerpt', $post_id);
+      error_log('Old excerpt: ' . $old_excerpt);
+      error_log('New excerpt: ' . $new_excerpt);
+
+      // Re-add the action
+      add_action('save_post', array($this, 'save_quick_edit_data'), 10, 1);
     }
   }
 
 
-  public function add_hidden_column($columns)
-  {
-    try {
-      $columns['excerpt_quick_edit'] = 'Excerpt Quick Edit';
-      return $columns;
-    } catch (Exception $e) {
-      $this->log_error('Add hidden column error: ' . $e->getMessage());
-      return $columns;
-    }
-  }
 
-  // Add hidden column content
-  public function add_hidden_column_content($column_name, $post_id)
-  {
-    try {
-      if ($column_name == 'excerpt_quick_edit') {
-        $excerpt = get_post_field('post_excerpt', $post_id);
-        if (is_wp_error($excerpt)) {
-          throw new Exception($excerpt->get_error_message());
-        }
-        echo '<div id="excerpt_quick_edit_' . intval($post_id) . '">' . esc_textarea($excerpt) . '</div>';
-      }
-    } catch (Exception $e) {
-      $this->log_error('Hidden column content error: ' . $e->getMessage());
-    }
-  }
 
-  // Error logging function
-  private function log_error($message)
+
+  // Add content to custom column
+  public function custom_column_content($column_name, $post_id)
   {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-      error_log('Excerpt Quick Edit Plugin Error: ' . $message);
+    if ($column_name == 'excerpt') {
+      $excerpt = get_post_field('post_excerpt', $post_id);
+      echo '<div id="excerpt-' . $post_id . '">' . esc_html($excerpt) . '</div>';
     }
   }
 }
 
-
-
-// Initialize the plugin with error handling
-try {
-  new ExcerptQuickEdit();
-} catch (Exception $e) {
-  error_log('Failed to initialize Excerpt Quick Edit Plugin: ' . $e->getMessage());
-}
+// Initialize the plugin
+new ExcerptQuickEdit();
