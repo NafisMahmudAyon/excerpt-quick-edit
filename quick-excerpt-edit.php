@@ -42,23 +42,24 @@ class ExcerptQuickEdit
   }
 
   // Add quick edit field
-  public function add_quick_edit_field($column_name, $post_type) {
+  public function add_quick_edit_field($column_name, $post_type)
+  {
     if ($column_name != 'excerpt_quick_edit') return;
-    ?>
-<fieldset class="inline-edit-col-right">
-  <div class="inline-edit-col">
-    <label>
-      <span class="title">Excerpt</span>
-      <span class="input-text-wrap">
-        <textarea name="excerpt" id="excerpt" rows="3"></textarea>
-      </span>
-    </label>
-    <?php wp_nonce_field('save_excerpt_quick_edit_nonce', 'excerpt_nonce'); ?>
-  </div>
-</fieldset>
+?>
+    <fieldset class="inline-edit-col-right">
+      <div class="inline-edit-col">
+        <label>
+          <span class="title">Excerpt</span>
+          <span class="input-text-wrap">
+            <textarea name="excerpt" id="excerpt" rows="3"></textarea>
+          </span>
+        </label>
+        <?php wp_nonce_field('save_excerpt_quick_edit_nonce', 'excerpt_nonce'); ?>
+      </div>
+    </fieldset>
 
 <?php
-    } 
+  }
   //   catch (Exception $e) {
   //     $this->log_error('Quick edit field error: ' . $e->getMessage());
   //   }
@@ -174,7 +175,7 @@ class ExcerptQuickEdit
     }
   }
 
-  
+
   public function add_hidden_column($columns)
   {
     try {
@@ -210,6 +211,8 @@ class ExcerptQuickEdit
     }
   }
 }
+
+
 
 // Initialize the plugin with error handling
 try {
