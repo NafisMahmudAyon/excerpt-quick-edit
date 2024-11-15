@@ -1,9 +1,12 @@
 <?php
 /*
 Plugin Name: Excerpt Quick Edit
-Description: Adds excerpt editing capability to Quick Edit for posts, pages, and custom post types
+Plugin URI: https://github.com/NafisMahmudAyon/excerpt-quick-edit
+Description: Description: A WordPress plugin that adds a custom quick edit field to the posts and pages list views, allowing users to quickly add or edit the excerpt of a post directly from the admin list without needing to open the editor. Ideal for bulk editing excerpts.
 Version: 1.0
-Author: Your Name
+Author: NafisMahmudAyon
+Author URI: https://www.nafisbd.com
+Text Domain: excerpt-quick-edit
 License: GPL2
 */
 
